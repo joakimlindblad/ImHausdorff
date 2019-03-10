@@ -1,18 +1,18 @@
-function [D,idx]=hausdorff(A,B,method)
-%HAUSDORFF distance for image segmentation.
+function [D,idx]=imhausdorff(A,B,method)
+%IMHAUSDORFF distance for image segmentation (i.e. of gridded data).
 %
-%function [D,IDX]=hausdorff(A,B,method='euclidean')
+%function [D,IDX]=imhausdorff(A,B,method='euclidean')
 %
-%   D = HAUSDORFF(BW1,BW2) computes the Hausdorff distance of binary
+%   D = IMHAUSDORFF(BW1,BW2) computes the Hausdorff distance of binary
 %   images BW1 and BW2
 %
-%   D = HAUSDORFF(L1,L2) computes the Hausdorff distance for each label
+%   D = IMHAUSDORFF(L1,L2) computes the Hausdorff distance for each label
 %   in label images L1 and L2.
 %
-%   D = HAUSDORFF(C1,C2) computes the Hausdorff distance for each
+%   D = IMHAUSDORFF(C1,C2) computes the Hausdorff distance for each
 %   category in categorical images C1 and C2.
 %
-%   D = HAUSDORFF(A,B,METHOD) lets you compute the Hausdorff distance
+%   D = IMHAUSDORFF(A,B,METHOD) lets you compute the Hausdorff distance
 %   with an alternate point-to-point distance.  METHOD can be
 %   'cityblock', 'chessboard', 'quasi-euclidean', 'euclidean' or
 %   'euclidean_precise'.  METHOD defaults to 'euclidean' if not specified.
@@ -21,16 +21,16 @@ function [D,idx]=hausdorff(A,B,method)
 %   distance of the farthest points found using the closest-pixel map of
 %   BWDIST
 %
-%   [D,IDX] = HAUSDORFF(...) also returns an N x 2 matrix of linear
+%   [D,IDX] = IMHAUSDORFF(...) also returns an N x 2 matrix of linear
 %   indices of the resp. farthest points contributing to the distance.
 %
 %   Notes
 %   -----
-%   HAUSDORFF uses BWDIST for fast computation, therefore the output
+%   IMHAUSDORFF uses BWDIST for fast computation, therefore the output
 %   is only of single precision unless METHOD is 'euclidean_precise'.
 %
-%   HAUSDORFF(A,[]) = inf, nnz(A)>0
-%   HAUSDORFF([],[]) = 0
+%   IMHAUSDORFF(A,[]) = inf, nnz(A)>0
+%   IMHAUSDORFF([],[]) = 0
 %
 %   Example 1
 %   ---------
@@ -51,7 +51,7 @@ function [D,idx]=hausdorff(A,B,method)
 %     BW_groundTruth = imread('hands1-mask.png');
 %
 %     % Compute the Hausdorff distance of this segmentation.
-%     [distance,idx] = hausdorff(BW, BW_groundTruth);
+%     [distance,idx] = imhausdorff(BW, BW_groundTruth);
 %
 %     % Display both masks on top of one another.
 %     figure
@@ -108,7 +108,7 @@ function [D,idx]=hausdorff(A,B,method)
 %
 %     % Compute the Hausdorff distance
 %     % for each segmented region.
-%     [distance,idx] = hausdorff(L, L_groundTruth);
+%     [distance,idx] = imhausdorff(L, L_groundTruth);
 %     distance
 %
 %     % Display a line indicating the farthest points
@@ -162,9 +162,13 @@ end
 if nargin < 3
     method = 'euclidean';
 else
-    valid_methods = {'euclidean','euclidean_precise','cityblock','chessboard','quasi-euclidean'};
+    valid_methods = {'euclidean','euclidean_precise','cityblock', ...
+        'chessboard','chebychev','quasi-euclidean'};
     method = validatestring(method, valid_methods, ...
                           mfilename, 'METHOD', 2);
+    if strcmp(method,'chebychev')
+        method = 'chessboard'; % synonymous
+    end
 end
 
 
