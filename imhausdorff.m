@@ -118,7 +118,7 @@ function [D,idx]=imhausdorff(A,B,method)
 %     text(mean(x),mean(y),num2str(distance),'VerticalAlignment','bottom');
 %     hold off
 %
-%   See also BWDIST, BFSCORE, DICE, JACCARD.
+%   See also HAUSDORFF, BWDIST, BFSCORE, DICE, JACCARD.
 %
 %Author: Joakim Lindblad
 
