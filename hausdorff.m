@@ -1,4 +1,4 @@
-function HD = hausdorff(a,b,method)
+function [D,idx] = hausdorff(A,B,method)
 %HAUSDORFF distance for point clouds.
 %
 %function [D,IDX]=hausdorff(a,b,method='euclidean')
@@ -12,6 +12,9 @@ function HD = hausdorff(a,b,method)
 %   with an alternate point-to-point distance.  METHOD can be any
 %   method supported by PDIST2.  METHOD defaults to 'euclidean' if not
 %   specified.
+%
+%   D = HAUSDORFF(A,B,DISTFUN) lets you compute the Hausdorff distance
+%   with a distance function specified using a function handle @
 %
 %   [D,IDX] = HAUSDORFF(...) also returns the indices of the farthest
 %   points contributing to the distance.
@@ -27,6 +30,7 @@ function HD = hausdorff(a,b,method)
 %   Example 1
 %   ---------
 %   Compute the Hausdorff distance for a binary segmentation.
+%   This is much slower than using IMHAUSDORFF.
 %
 %     % Read in an image with an object we wish to segment.
 %     A = imread('hands1.jpg');
@@ -42,8 +46,12 @@ function HD = hausdorff(a,b,method)
 %     % Read in the ground truth against which to compare the segmentation.
 %     BW_groundTruth = imread('hands1-mask.png');
 %
+%     % Extract object point coordinates
+%     A=regionprops(BW,'PixelList');
+%     B=regionprops(BW_groundTruth,'PixelList');
+%
 %     % Compute the Hausdorff distance of this segmentation.
-%     [distance,idx] = imhausdorff(BW, BW_groundTruth);
+%     [distance,idx] = hausdorff(A.PixelList,B.PixelList);
 %
 %     % Display both masks on top of one another.
 %     figure
@@ -51,9 +59,9 @@ function HD = hausdorff(a,b,method)
 %     title(['Hausdorff distance = ' num2str(distance)])
 %
 %     % Display a line indicating the farthest points
-%     [y,x]=ind2sub(size(BW),idx);
+%     p=[A.PixelList(idx(1),:);B.PixelList(idx(2),:)];
 %     hold on;
-%     plot(x,y,'rx-','linewidth',2');
+%     plot(p(:,1),p(:,2),'rx-','linewidth',2');
 %     hold off
 %
 %   See also IMHAUSDORFF, PDIST2.
@@ -62,22 +70,63 @@ function HD = hausdorff(a,b,method)
 
 % Copyright (c) 2019, Joakim Lindblad
 
-if isempty(a) || isempty(b)
-	if isempty(a) && isempty(b)
-		HD=0;
-	else
-		HD=inf;
-	end
-	return
+
+if size(A,2) ~= size(B,2)
+    error('A and B must have the same number of columns.');
 end
 
-% Max of dist from A to B and B to A
-if (size(a,1)*size(b,1)) < 256*256
-	D = pdist2(a,b,'squaredeuclidean');
-	HD = sqrt(max(max(min(D,[],1)),max(min(D,[],2))));
+if nargin < 3
+    method = 'euclidean';
 else
-	% Less memory hungry version
-	D1 = pdist2(a,b,'squaredeuclidean','Smallest',1);
-	D2 = pdist2(b,a,'squaredeuclidean','Smallest',1);
-	HD = sqrt(max(max(D1),max(D2)));
+    if strcmp(method,'chessboard')
+        method = 'chebychev'; % synonymous
+    end
+end
+
+
+if isempty(A) || isempty(B)
+    if isempty(A) && isempty(B)
+        HD=0;
+    else
+        HD=inf;
+    end
+    return
+end
+
+if strcmp(method,'euclidean')
+    method='squaredeuclidean'; % faster
+    apply_root=true;
+else
+    apply_root=false;
+end
+
+
+% Max of dist from A to B and B to A
+if (size(A,1)*size(B,1) < 1e8)
+    D = pdist2(A,B,method);
+    [D1,idxA1] = min(D,[],1);
+    [D2,idxB1] = min(D,[],2);
+    clear D;
+else
+    % Less memory hungry version
+    [D1,idxA1] = pdist2(A,B,method,'Smallest',1);
+    [D2,idxB1] = pdist2(B,A,method,'Smallest',1);
+end
+[D1,idxB2]=max(D1);
+[D2,idxA2]=max(D2);
+
+if (D1>D2)
+    D=D1;
+    idx=[idxA1(idxB2),idxB2];
+else
+    D=D2;
+    idx=[idxA2,idxB1(idxA2)];
+end
+
+if apply_root
+    D = sqrt(D);
+end
+
+if (nargout < 2)
+    clear idx;
 end
